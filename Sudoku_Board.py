@@ -14,16 +14,22 @@ class Sudoku_Board():
         return self.__possible_values
 
     def get_history(self):
-        return self.__history
+        return self.__history.copy()
 
-    def get_current_his_pos(self):
+    def get_his_pos(self):
         return self.__current_his_pos
+
+    def get_board_at(self, pos):
+        return self.__board[pos].copy()
+
+    def get_pv_at(self, pos):
+        return self.__possible_values[pos].copy()
 
     def append_to_history(self, value):
         self.__history.append(value)
         self.__current_his_pos += 1
 
-    def insert_to_board(self, num, pos):
+    def set_board_at(self, num, pos):
         self.__board[pos] = num
         self.__history.append([pos[0], pos[1], num])
         self.__current_his_pos += 1
@@ -48,30 +54,9 @@ class Sudoku_Board():
                     new_value = item[2]
             self.__board[x,y] = new_value
             self.__current_his_pos -= 1
-
+    
     def step_forward_history(self):   
         if self.__current_his_pos < len(self.__history)-1:
             x, y, value = self.__history[self.__current_his_pos+1]
             self.__board[x,y] = value
             self.__current_his_pos += 1
-
-
-
-    # not used 
-
-    def __is_valid_placing(self, num, pos):
-        if (not self.__board[pos] and 
-              num not in self.__board[pos[0],] and 
-              num not in self.__board[:,pos[1]] and 
-              num not in self.__board[pos[0]//3*3:pos[0]//3*3+3 ,pos[1]//3*3:pos[1]//3*3+3]):
-            return True
-        return False
-
-    def insert_wth_check(self, num, pos):
-        if self.__is_valid_placing(num, pos):
-            self.__board[pos] = num
-            return True
-        else: return False
-
-
-
