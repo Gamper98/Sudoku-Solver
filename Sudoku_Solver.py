@@ -1,41 +1,50 @@
-#%%
 import numpy as np
 
 class Sudoku_Solver():
     def __init__(self, board):
         self.__boardClass = board
     
-    def solve(self): #return board and history list
+    def solve(self):
         indeces = [key for key, item in self.__pattern_methods.items() if item[1]]
         for pos in indeces:
             solution = self.__pattern_methods[pos][0](self)
-            if np.any(solution.flatten()!=0):
-                return solution
-        return np.zeros((9,9), dtype=np.uint8)
+            if pos in (0, 1) and np.any(solution.flatten()!=0):
+                self.__change_pv(solution)
+                return True, solution
+            if pos not in (0, 1) and solution:
+                return True, None
+        return False, None
 
-    def set_patterns(self, values):
+    def set_pattern_names(self, values):
         for i in range(len(values)):
             self.__pattern_methods[i][1] = values[i]
 
-    def get_patterns_name(self):
+    def get_patterns_names(self):
         return [item[2] for item in self.__pattern_methods.values()]
 
     def setup_possible_values(self):
         not_filled_squared_mask = self.__boardClass.get_board() == 0 
         self.__boardClass.get_possible_values()[:] *= not_filled_squared_mask
-        self.__apply_col_mask()
-        self.__apply_row_mask()
-        self.__apply_sq_mask()
+        self.__apply_masks(self.__boardClass.get_board())
 
-    def __apply_row_mask(self):
-        self.__boardClass.get_possible_values()[:] = (self.__boardClass.get_possible_values().T * self.__rows_to_mask(self.__boardClass.get_board())).T # .swapaxes(2,0)
+    def __change_pv(self, max_values):   
+        self.__boardClass.get_possible_values()[np.repeat(max_values[None] != 0, 9, axis=0)] = False
+        self.__apply_masks(max_values)
 
-    def __apply_col_mask(self): 
-        self.__boardClass.get_possible_values()[:] = (self.__boardClass.get_possible_values().T.swapaxes(0,1) * self.__rows_to_mask(self.__boardClass.get_board().T)).swapaxes(0,1).T
+    def __apply_masks(self, board):
+        self.__apply_row_mask(board)
+        self.__apply_col_mask(board)
+        self.__apply_sq_mask(board)
 
-    def __apply_sq_mask(self):
+    def __apply_row_mask(self, board):
+        self.__boardClass.get_possible_values()[:] = (self.__boardClass.get_possible_values().T * self.__rows_to_mask(board)).T
+
+    def __apply_col_mask(self, board): 
+        self.__boardClass.get_possible_values()[:] = (self.__boardClass.get_possible_values().T.swapaxes(0,1) * self.__rows_to_mask(board.T)).swapaxes(0,1).T
+
+    def __apply_sq_mask(self, board):
         possible_values_sqares_to_rows = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
-        sq_mask = self.__rows_to_mask(self.__boardClass.get_board().reshape(3,3,3,3).swapaxes(1,2).reshape(9,9))
+        sq_mask = self.__rows_to_mask(board.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9))
         possible_values_sqares_to_rows = possible_values_sqares_to_rows * sq_mask.T[:,:,None]
         self.__boardClass.get_possible_values()[:] = possible_values_sqares_to_rows.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
 
@@ -88,9 +97,23 @@ class Sudoku_Solver():
         values = values.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9)
 
         return values
-
-    def get_pointing_pairs(self):
-        sq_to_rows = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+    
+    def pointing_pairs(self):
+        lines_ppairs = self.get_pointing_pairs(self.__boardClass.get_possible_values())
+        column_ppairs = self.get_pointing_pairs(self.__boardClass.get_possible_values().swapaxes(1,2))
+        pv = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        cond_1 = np.any(pv[lines_ppairs])
+        pv[lines_ppairs] = False
+        pv = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        self.__boardClass.get_possible_values()[:] = pv
+        pv = self.__boardClass.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        cond_2 = np.any(pv[column_ppairs])
+        pv[column_ppairs] = False
+        self.__boardClass.get_possible_values()[:] = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).swapaxes(1,2)
+        return cond_1 or cond_2
+        
+    def get_pointing_pairs(self, pv):
+        sq_to_rows = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         sq_to_rows_to_3x3col = sq_to_rows.reshape(9,9,3,3)
         sqr_3x3col_sum = np.sum(sq_to_rows_to_3x3col, axis=3, dtype=np.bool8)
         pp_sqr = np.count_nonzero(sqr_3x3col_sum, axis=2)
@@ -101,50 +124,14 @@ class Sudoku_Solver():
         rows = [sqrs//3*3 + (sqrs-1)%3, sqrs//3*3 + (sqrs+1)%3]
         cols = np.column_stack(cols)
         rows = np.column_stack(rows)
-        '''
-        func_array = np.zeros((9,9,3), dtype=np.bool8)
-        to_mult = [[1,1,0], [1,0,1], [0,1,1]]
-        for i in range(3):
-            temp = sqr_3x3col_sum * to_mult[i]
-            func_array[:,:,i] = np.prod(temp, axis=2)
-        f_result = np.sum(func_array, axis=2)
-        valid_rows = sq_to_rows * ~f_result.astype(np.bool8)
-        nums_raw = np.argmax(valid_rows, axis=2)
-        row_ids = nums_raw // 3 % 3
-        row_ids = row_ids + [[0,3,6,0,3,6,0,3,6]]
-        col_ids = np.full((9,9), [0,0,0,1,1,1,2,2,2])
-        np.where(nums_raw !=0, (row_ids, col_ids))
-        sq_to_rows.reshape(9,9,3,3)'''
+        return (nums.T[None,None], rows.T[None], np.repeat(cols[:,None], 2, axis=1).T)
+
+    def box_line_reduction(self):
         pass
 
-    __pattern_methods = {0:[get_hidden_singles_matrix, True, 'Hidden Singles'], 
-                        1:[get_naked_singles_matrix, False, 'Naked Singles']}
+    __pattern_methods = {
+        0:[get_naked_singles_matrix, True, 'Naked Singles'],
+        1:[get_hidden_singles_matrix, True, 'Hidden Singles'], 
+        2:[pointing_pairs, True, 'Pointing Pairs']
+        }
 
-if __name__ == '__main__':
-    from Sudoku_Board import *
-    board = Sudoku_Board()
-    board.set_board([[0,0,0,0,0,0,4,7,0],
-                    [7,9,3,0,0,4,2,8,0],
-                    [8,4,0,0,7,2,0,9,0],
-                    [3,5,7,4,9,1,6,2,8],
-                    [0,0,9,8,2,5,3,4,7],
-                    [4,2,8,7,3,6,0,1,0],
-                    [0,0,4,5,0,0,0,6,2],
-                    [5,0,6,2,4,0,8,3,0],
-                    [0,0,0,0,6,0,7,5,4]], [[0,6,4],[1,0,7],[3,3,4],[7,3,2],[8,7,5],[5,0,4],[6,2,4],[3,2,7],[5,5,6],[3,1,5],[3,4,9],[3,7,2],[4,4,2],[1,6,2],[1,7,8],[3,8,8],[4,3,8],[7,7,3],[4,6,3],[5,7,1],[3,0,3]])
-    s = Sudoku_Solver(board)
-    s.setup_possible_values()
-
-
-
-def possible_values_plot(s):
-    import matplotlib.pyplot as plt
-
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    x_pos, y_pos, z_pos = np.where(s.get_possible_values() == False)
-    ax.view_init(180, 270)
-    #ax.view_init(170, 260)
-    ax.scatter(z_pos, x_pos[::-1], y_pos, c=x_pos)
-
-# %%
