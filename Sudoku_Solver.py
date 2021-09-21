@@ -99,8 +99,8 @@ class Sudoku_Solver():
         return values
     
     def pointing_pairs(self):
-        lines_ppairs = self.get_pointing_pairs(self.__boardClass.get_possible_values())
-        column_ppairs = self.get_pointing_pairs(self.__boardClass.get_possible_values().swapaxes(1,2))
+        lines_ppairs = self.get_change_pos(self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
+        column_ppairs = self.get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
         pv = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
@@ -110,24 +110,10 @@ class Sudoku_Solver():
         pv[column_ppairs] = False
         self.__boardClass.get_possible_values()[:] = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).swapaxes(1,2)
         return cond_1 or cond_2
-        
-    def get_pointing_pairs(self, pv):
-        sq_to_rows = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
-        sq_to_rows_to_3x3col = sq_to_rows.reshape(9,9,3,3)
-        sqr_3x3col_sum = np.sum(sq_to_rows_to_3x3col, axis=3, dtype=np.bool8)
-        pp_sqr = np.count_nonzero(sqr_3x3col_sum, axis=2)
-        pos = np.argmax(sqr_3x3col_sum, axis=2)
-        pos[pp_sqr != 1] = -1
-        nums , sqrs = np.where(pos != -1)
-        cols = [pos[nums, sqrs]*3,pos[nums, sqrs]*3+1, pos[nums, sqrs]*3+2 ]
-        rows = [sqrs//3*3 + (sqrs-1)%3, sqrs//3*3 + (sqrs+1)%3]
-        cols = np.column_stack(cols)
-        rows = np.column_stack(rows)
-        return (nums.T[None,None], rows.T[None], np.repeat(cols[:,None], 2, axis=1).T)
 
     def box_line_reduction(self):
-        lines_ppairs = self.get_box_line_reduction(self.__boardClass.get_possible_values())
-        column_ppairs = self.get_box_line_reduction(self.__boardClass.get_possible_values().swapaxes(1,2))
+        lines_ppairs = self.get_change_pos(self.__boardClass.get_possible_values())
+        column_ppairs = self.get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2))
         pv = self.__boardClass.get_possible_values()
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
@@ -138,13 +124,20 @@ class Sudoku_Solver():
         self.__boardClass.get_possible_values()[:] = pv.swapaxes(1,2)
         print(cond_1 or cond_2)
         return cond_1 or cond_2
+        
+    def get_change_pos(self, pv):
+        pos = self.get_third_filled_rows(pv)
+        return self.get_sqrs_to_change_pos(pos)
 
-    def get_box_line_reduction(self, pv):
+    def get_third_filled_rows(self, pv):
         rows_to_3x3sqrs = pv.reshape(9,9,3,3)
         rows_to_3x3sqrs_sum = np.sum(rows_to_3x3sqrs, axis=3, dtype=np.bool8)
         blr_sqrs = np.count_nonzero(rows_to_3x3sqrs_sum, axis=2)
         pos = np.argmax(rows_to_3x3sqrs_sum, axis=2)
         pos[blr_sqrs != 1] = -1
+        return pos
+
+    def get_sqrs_to_change_pos(self, pos):
         nums , sqrs = np.where(pos != -1)
         cols = [pos[nums, sqrs]*3,pos[nums, sqrs]*3+1, pos[nums, sqrs]*3+2 ]
         rows = [sqrs//3*3 + (sqrs-1)%3, sqrs//3*3 + (sqrs+1)%3]
