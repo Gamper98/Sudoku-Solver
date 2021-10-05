@@ -1,4 +1,5 @@
 import numpy as np
+import itertools as itr
 
 class Sudoku_Solver():
     def __init__(self, board):
@@ -99,8 +100,8 @@ class Sudoku_Solver():
         return values
     
     def pointing_pairs(self):
-        lines_ppairs = self.get_change_pos(self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
-        column_ppairs = self.get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
+        lines_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
+        column_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
         pv = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
@@ -112,8 +113,8 @@ class Sudoku_Solver():
         return cond_1 or cond_2
 
     def box_line_reduction(self):
-        lines_ppairs = self.get_change_pos(self.__boardClass.get_possible_values())
-        column_ppairs = self.get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2))
+        lines_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values())
+        column_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2))
         pv = self.__boardClass.get_possible_values()
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
@@ -122,14 +123,13 @@ class Sudoku_Solver():
         cond_2 = np.any(pv[column_ppairs])
         pv[column_ppairs] = False
         self.__boardClass.get_possible_values()[:] = pv.swapaxes(1,2)
-        print(cond_1 or cond_2)
         return cond_1 or cond_2
         
-    def get_change_pos(self, pv):
-        pos = self.get_third_filled_rows(pv)
-        return self.get_sqrs_to_change_pos(pos)
+    def __get_change_pos(self, pv):
+        pos = self.__get_third_filled_rows(pv)
+        return self.__get_sqrs_to_change_pos(pos)
 
-    def get_third_filled_rows(self, pv):
+    def __get_third_filled_rows(self, pv):
         rows_to_3x3sqrs = pv.reshape(9,9,3,3)
         rows_to_3x3sqrs_sum = np.sum(rows_to_3x3sqrs, axis=3, dtype=np.bool8)
         blr_sqrs = np.count_nonzero(rows_to_3x3sqrs_sum, axis=2)
@@ -137,7 +137,7 @@ class Sudoku_Solver():
         pos[blr_sqrs != 1] = -1
         return pos
 
-    def get_sqrs_to_change_pos(self, pos):
+    def __get_sqrs_to_change_pos(self, pos):
         nums , sqrs = np.where(pos != -1)
         cols = [pos[nums, sqrs]*3,pos[nums, sqrs]*3+1, pos[nums, sqrs]*3+2 ]
         rows = [sqrs//3*3 + (sqrs-1)%3, sqrs//3*3 + (sqrs+1)%3]
@@ -145,10 +145,53 @@ class Sudoku_Solver():
         rows = np.column_stack(rows)
         return (nums.T[None,None], rows.T[None], np.repeat(cols[:,None], 2, axis=1).T)
 
+    def naked_pairs(self):
+        return self.__naked_subsets(2)
+
+    def naked_triples(self):
+        return self.__naked_subsets(3)
+
+    def naked_quads(self):
+        return self.__naked_subsets(4)
+
+    def __naked_subsets(self, nc):
+        pv_rows = self.__subset_finder(self.__boardClass.get_possible_values() , nc)
+        pv_cols = self.__subset_finder(self.__boardClass.get_possible_values().swapaxes(1,2), nc)
+        pv_sqrs = self.__subset_finder(self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9), nc)
+        pv_original = self.__boardClass.get_possible_values().copy()
+        self.__boardClass.get_possible_values()[:] *= pv_rows * pv_cols.swapaxes(1,2) * pv_sqrs.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        return np.any(pv_original != self.__boardClass.get_possible_values())
+
+    def __subset_finder(self, pv, nc):
+        pv_nc_amount_in_cell = pv.copy()
+        count_nonzero = np.count_nonzero(pv_nc_amount_in_cell, axis=0)
+        pv_nc_amount_in_cell[:, (count_nonzero > nc) & (count_nonzero == 0)] = False
+
+        col_inds = [np.argwhere(data).flatten() for data in np.any(pv_nc_amount_in_cell, axis=0)]
+        col_inds_combs = [  [[ind] * nc, item] for ind, data in enumerate(col_inds) for item in itr.combinations(data,nc)]
+        if col_inds_combs == []: return pv
+        np_col_inds_combs = np.array(col_inds_combs)
+        pv_col_combs = pv_nc_amount_in_cell[:,np_col_inds_combs[:,0], np_col_inds_combs[:,1]]
+        pv_col_combs_any = np.any(pv_col_combs, axis=2)
+        pv_count_uniques = np.count_nonzero(pv_col_combs_any, axis=0)
+        x_unqiues_mask = pv_count_uniques==nc
+        pv_nc_subsets = pv.copy()
+        rows = np_col_inds_combs[x_unqiues_mask,0,1]
+        cols = np_col_inds_combs[x_unqiues_mask,1]
+        nums = np.nonzero(pv_col_combs_any[:, x_unqiues_mask].T)[1].reshape(-1,nc)
+        pv_nc_subsets[nums, rows[:, None]] = False
+        pv_nc_subsets[nums[:,None].T, rows[None,None], cols[:,:,None].T] = True
+        return pv_nc_subsets
+
+
+
     __pattern_methods = {
         0:[get_naked_singles_matrix, True, 'Naked Singles'],
         1:[get_hidden_singles_matrix, True, 'Hidden Singles'], 
         2:[pointing_pairs, True, 'Pointing Pairs'],
-        3:[box_line_reduction, True, 'Box Line Reduction']
+        3:[box_line_reduction, True, 'Box Line Reduction'],
+        4:[naked_pairs, True, 'Naked Pairs'],
+        5:[naked_triples, True, 'Naked Triples'],
+        6:[naked_quads, True, 'Naked Quads']
         }
 
