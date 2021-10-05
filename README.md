@@ -1,4 +1,4 @@
-# Diploma-Work
+# Sudoku Solver with gui
 Sudoku solver written in python
 
 This program is mainly written for solving sudoku games based on strategies eg.: naked singles, swordfish, x-wing
