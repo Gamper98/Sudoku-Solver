@@ -154,18 +154,37 @@ class Sudoku_Solver():
     def naked_quads(self):
         return self.__naked_subsets(4)
 
-    def __naked_subsets(self, nc):
-        pv_rows = self.__subset_finder(self.__boardClass.get_possible_values() , nc)
-        pv_cols = self.__subset_finder(self.__boardClass.get_possible_values().swapaxes(1,2), nc)
-        pv_sqrs = self.__subset_finder(self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9), nc)
+    def hidden_pairs(self):
+        return self.__hidden_subsets(2)
+    
+    def hidden_triples(self):
+        return self.__hidden_subsets(3)
+        
+    def hidden_quads(self):
+        return self.__hidden_subsets(4)
+
+    def __hidden_subsets(self, nc):
         pv_original = self.__boardClass.get_possible_values().copy()
+        pv_rows = self.__subset_finder(pv_original.swapaxes(0,2) , nc)
+        pv_cols = self.__subset_finder(pv_original.swapaxes(1,2).swapaxes(0,2), nc)
+        pv_sqrs = self.__subset_finder(pv_original.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).swapaxes(0,2), nc)
+        self.__boardClass.get_possible_values()[:] *= pv_rows.swapaxes(0,2) *\
+                pv_cols.swapaxes(0,2).swapaxes(1,2) *\
+                pv_sqrs.swapaxes(0,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        return np.any(pv_original != self.__boardClass.get_possible_values()) 
+
+    def __naked_subsets(self, nc):
+        pv_original = self.__boardClass.get_possible_values().copy()
+        pv_rows = self.__subset_finder(pv_original , nc)
+        pv_cols = self.__subset_finder(pv_original.swapaxes(1,2), nc)
+        pv_sqrs = self.__subset_finder(pv_original.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9), nc)
         self.__boardClass.get_possible_values()[:] *= pv_rows * pv_cols.swapaxes(1,2) * pv_sqrs.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         return np.any(pv_original != self.__boardClass.get_possible_values())
 
     def __subset_finder(self, pv, nc):
         pv_nc_amount_in_cell = pv.copy()
         count_nonzero = np.count_nonzero(pv_nc_amount_in_cell, axis=0)
-        pv_nc_amount_in_cell[:, (count_nonzero > nc) & (count_nonzero == 0)] = False
+        pv_nc_amount_in_cell[:, (count_nonzero > nc) | (count_nonzero < 2)] = False
 
         col_inds = [np.argwhere(data).flatten() for data in np.any(pv_nc_amount_in_cell, axis=0)]
         col_inds_combs = [  [[ind] * nc, item] for ind, data in enumerate(col_inds) for item in itr.combinations(data,nc)]
@@ -192,6 +211,9 @@ class Sudoku_Solver():
         3:[box_line_reduction, True, 'Box Line Reduction'],
         4:[naked_pairs, True, 'Naked Pairs'],
         5:[naked_triples, True, 'Naked Triples'],
-        6:[naked_quads, True, 'Naked Quads']
+        6:[naked_quads, True, 'Naked Quads'],
+        7:[hidden_pairs, True, 'Hidden Pairs'],
+        8:[hidden_triples, True, 'Hidden Triples'],
+        9:[hidden_quads, True, 'Hidden Quads']
         }
 
