@@ -178,17 +178,18 @@ class Sudoku_Solver():
         pv_rows = self.__subset_finder(pv_original , nc)
         pv_cols = self.__subset_finder(pv_original.swapaxes(1,2), nc)
         pv_sqrs = self.__subset_finder(pv_original.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9), nc)
-        self.__boardClass.get_possible_values()[:] *= pv_rows * pv_cols.swapaxes(1,2) * pv_sqrs.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        self.__boardClass.get_possible_values()[:] *= pv_rows * pv_cols.swapaxes(1,2) *\
+                pv_sqrs.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         return np.any(pv_original != self.__boardClass.get_possible_values())
 
     def __subset_finder(self, pv, nc):
         pv_nc_amount_in_cell = pv.copy()
         count_nonzero = np.count_nonzero(pv_nc_amount_in_cell, axis=0)
-        pv_nc_amount_in_cell[:, (count_nonzero > nc) | (count_nonzero < 2)] = False
+        pv_nc_amount_in_cell[:, (count_nonzero > nc) | (count_nonzero == 1)] = False
 
         col_inds = [np.argwhere(data).flatten() for data in np.any(pv_nc_amount_in_cell, axis=0)]
         col_inds_combs = [  [[ind] * nc, item] for ind, data in enumerate(col_inds) for item in itr.combinations(data,nc)]
-        if col_inds_combs == []: return pv
+        if not col_inds_combs: return pv
         np_col_inds_combs = np.array(col_inds_combs)
         pv_col_combs = pv_nc_amount_in_cell[:,np_col_inds_combs[:,0], np_col_inds_combs[:,1]]
         pv_col_combs_any = np.any(pv_col_combs, axis=2)
