@@ -203,7 +203,45 @@ class Sudoku_Solver():
         pv_nc_subsets[nums[:,None].T, rows[None,None], cols[:,:,None].T] = True
         return pv_nc_subsets
 
+    def x_wing(self):
+        return self.__nc_wings_apply(2)
 
+    def swordfish(self):
+        return self.__nc_wings_apply(3)
+
+
+    def __nc_wings_apply(self, nc):
+        pv_original = self.__boardClass.get_possible_values().copy()
+        pv_rows = self.__nc_wings_finder(pv_original , nc)
+        pv_cols = self.__nc_wings_finder(pv_original.swapaxes(1,2), nc)
+        self.__boardClass.get_possible_values()[:] *= pv_rows *\
+                pv_cols.swapaxes(1,2)
+        return np.any(pv_original != self.__boardClass.get_possible_values()) 
+
+
+    def __nc_wings_finder(self, pv, nc):
+        pv_copy = pv.copy()
+        count_rows = np.count_nonzero(pv_copy, axis=2)
+        count_rows[(count_rows == 1) | (count_rows > nc)] = 0
+
+        row_inds = [np.argwhere(row).flatten() for row in count_rows]
+        row_inds_combs = [  [[ind] * nc, item] for ind, data in enumerate(row_inds)\
+            for item in itr.combinations(data,nc)]
+        if not row_inds_combs: return pv
+        np_row_inds_combs = np.array(row_inds_combs)
+
+        pv_row_combs = pv[np_row_inds_combs[:,0],np_row_inds_combs[:,1]]
+        pv_row_combs_any = np.any(pv_row_combs, axis=1)
+        pv_count_dup = np.count_nonzero(pv_row_combs_any, axis=1)
+        nc_dup_mask = pv_count_dup == nc
+
+        num = np_row_inds_combs[nc_dup_mask, 0, 1]
+        row = np_row_inds_combs[nc_dup_mask, 1]
+        col = np.nonzero(pv_row_combs_any[nc_dup_mask])[1].reshape(-1,nc)
+
+        pv_copy[num[:,None], :, col] = False
+        pv_copy[num[:,None,None], row[:,:,None], np.repeat(col[:,None], nc, axis=1)] = True
+        return pv_copy
 
     __pattern_methods = {
         0:[get_naked_singles_matrix, True, 'Naked Singles'],
@@ -215,6 +253,8 @@ class Sudoku_Solver():
         6:[naked_quads, True, 'Naked Quads'],
         7:[hidden_pairs, True, 'Hidden Pairs'],
         8:[hidden_triples, True, 'Hidden Triples'],
-        9:[hidden_quads, True, 'Hidden Quads']
+        9:[hidden_quads, True, 'Hidden Quads'],
+        10:[x_wing, True, 'X-wing'],
+        11:[swordfish, True, 'Swordfish']
         }
 
