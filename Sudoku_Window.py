@@ -16,7 +16,7 @@ class Sudoku_Window():
     def __get_layout(self):
         p_name = self.__model.get_pattern_names()
         pattern_checkbox_list = [[sg.Text('Használni kivánt minták:')]] +\
-                [[sg.Checkbox('{}'.format(p_name[i]), default=True, k=i+100)]
+                [[sg.Checkbox('{}'.format(p_name[i]), default=False, k=i+100)]
                 for i in range(len(p_name))]
 
         sudoku_input_grid = [[sg.Graph(
