@@ -21,24 +21,9 @@ class Sudoku_Modell:
     
     def get_possible_values(self):
         return self.__board.get_possible_values().copy()
-    
-    def get_history(self):
-        return self.__board.get_history()
-
-    def get_his_pos(self):
-        return self.__board.get_his_pos()
 
     def set_board_at(self, num, pos):
         self.__board.set_board_at(num, pos)
-
-    def append_to_history(self, his):
-        self.__board.append_to_history(his)
-
-    def step_back_history(self):
-        self.__board.step_back_history()
-
-    def step_forward_history(self): 
-        self.__board.step_forward_history()
 
     #solver methods
     def get_pattern_names(self):
@@ -81,7 +66,6 @@ class Sudoku_Modell:
             for key in temp.keys():
                 self.__file[key] = {}
                 self.__file[key]['board'] = np.array(temp[key]['board'], dtype=np.uint8)
-                self.__file[key]['history'] = temp[key]['history']
             f.close()
             return True
         except:
