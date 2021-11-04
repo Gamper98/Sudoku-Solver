@@ -55,7 +55,7 @@ class Sudoku_Window():
                 sg.Text('Eddigi lépések')
             ],
             [
-                sg.Listbox(values=[], enable_events=False, size=(15,15), k='history', select_mode=sg.SELECT_MODE_SINGLE)
+                sg.Listbox(values=[], enable_events=False, size=(75,15), k='history', select_mode=sg.SELECT_MODE_SINGLE)
             ],
             [
                 sg.Button('Visszalép', k='back'),
@@ -152,7 +152,6 @@ class Sudoku_Window():
                 if self.__model.get_board_at((row, col)) != 0:
                     self.__set_board_at(self.__model.get_board_at((row, col)), (row, col))
         self.__model.setup_possible_values()
-        self.__set_history()
 
     def __set_history(self):
         his = self.__model.get_history()
@@ -160,14 +159,24 @@ class Sudoku_Window():
         self.__window['history'].update(his, set_to_index=[his_len])
 
     def __back(self):
-        pass
+        his = self.__model.step_back_his()
+        if his.op_type == Op_Type.Add:
+            self.__window[his.row,his.col].erase()
+        else:
+            nums = np.argwhere(self.__model.get_pv_at(([0,1,2,3,4,5,6,7,8], his.row, his.col))).flatten()+1
+            self.__set_pv_at(nums, (his.row,his.col))
+
+        self.__window['history'].update(set_to_index=[self.__model.get_his_pos()])
 
     def __forward(self):
-        self.__model.step_forward_history()
-        x,y, num = self.__model.get_history()[self.__model.get_his_pos()]
-        self.__set_board_at(num, (x,y))
-        self.__set_history()
+        his = self.__model.step_forward_his()
+        if his.op_type == Op_Type.Add:
+            self.__set_board_at(his.num, (his.row, his.col))
+        else:
+            nums = np.argwhere(self.__model.get_pv_at(([0,1,2,3,4,5,6,7,8], his.row, his.col))).flatten()+1
+            self.__set_pv_at(nums, (his.row, his.col))
 
+        self.__window['history'].update(set_to_index=[self.__model.get_his_pos()])
 
     def main(self):
         while True:
