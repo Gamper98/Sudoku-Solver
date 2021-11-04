@@ -1,9 +1,12 @@
 import PySimpleGUI as sg
 from Sudoku_Modell import *
+from Sudoku_History import Op_Type
+import numpy as np
 
 class Sudoku_Window():
     def __init__(self):
         self.__active_sq = None
+        self.__is_active = True
         self.__model = Sudoku_Modell()
         self.__window = sg.Window("Sudoku megoldó", self.__get_layout(), return_keyboard_events=True).Finalize()
         self.__containing_sqs = []
@@ -100,6 +103,7 @@ class Sudoku_Window():
             self.__window[pos].draw_text(num, location=(9 * ((num-1)%3+1),36- 9 * ((num-1)//3+1)), font=('',8))
 
     def __set_number(self, num, pos):
+        if not self.__is_active: return
         self.__set_board_at(num, pos)
         self.__model.set_board_at(num, pos)
 
@@ -111,8 +115,11 @@ class Sudoku_Window():
                 self.__window[(row,col)].erase()
                 self.__window[(row,col)].update(self.__designs['inactive_color'])
         self.__window['history'].update([])
+        self.__is_active = True
     
     def __solve_board(self, values):
+        self.__model.setup_possible_values()
+        self.__is_active = False
         checkbox_values = [values[key] for key in values.keys() if isinstance(key, int)]
         self.__model.set_pattern_names(checkbox_values)
         his_pos = self.__model.get_his_pos()
@@ -122,9 +129,11 @@ class Sudoku_Window():
                 num = self.__model.get_board_at((row, col))
                 if num:
                     self.__set_board_at(num, (row, col))
+        self.__fill_possible_values()
         self.__set_history()
     
     def __fill_possible_values(self):
+        self.__model.setup_possible_values()
         for row in range(9):
             for col in range(9):
                 if self.__model.get_board_at((row, col)) == 0:
