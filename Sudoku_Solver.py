@@ -1,18 +1,24 @@
 import numpy as np
 import itertools as itr
+from Sudoku_History import Op_Type
 
 class Sudoku_Solver():
-    def __init__(self, board):
+    def __init__(self, board, his):
         self.__boardClass = board
+        self.__hisClass = his
     
     def solve(self):
         indeces = [key for key, item in self.__pattern_methods.items() if item[1]]
+        pv_original = self.__boardClass.get_possible_values().copy()
         for pos in indeces:
             solution = self.__pattern_methods[pos][0](self)
             if pos in (0, 1) and np.any(solution.flatten()!=0):
                 self.__change_pv(solution)
+                self.__hisClass.append_history_array(Op_Type.Remove, pv_original != self.__boardClass.get_possible_values() , self.__pattern_methods[pos][2])
+                self.__hisClass.append_history_array(Op_Type.Add, solution, self.__pattern_methods[pos][2])
                 return True, solution
             if pos not in (0, 1) and solution:
+                self.__hisClass.append_history_array(Op_Type.Remove, pv_original != self.__boardClass.get_possible_values() , self.__pattern_methods[pos][2])
                 return True, None
         return False, None
 
