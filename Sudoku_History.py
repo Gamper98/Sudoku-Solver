@@ -17,6 +17,15 @@ class History:
     def __str__(self):
         return f'Pattern name={self.p_name}, Operation={self.op_type.name}, row={self.row+1}, col={self.col+1}, num={self.num+1}'
 
+    def __eq__(self, o):
+        if isinstance(o, History):
+            return self.op_type == o.op_type and \
+                    self.row == o.row and \
+                    self.col == o.col and \
+                    self.num == o.num and \
+                    self.p_name == o.p_name
+        return False
+
 class Sudoku_History:
     def __init__(self):
         self.__history = []
