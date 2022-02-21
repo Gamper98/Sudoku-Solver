@@ -33,9 +33,9 @@ class Sudoku_Window():
                     for col in range(9)] 
                         for row in range(9)] +\
             [[
-            sg.Button('Clear', k='clear'),
-            sg.Button('Solve', k='solve'),
-            sg.Button('Fill pencil marks', k='pen_marks')
+            sg.Button('Törlés', k='clear'),
+            sg.Button('Megoldás', k='solve'),
+            sg.Button('Jelöltek beírása', k='pen_marks')
             ]]
 
         file_load_and_choose_list = [
@@ -44,7 +44,7 @@ class Sudoku_Window():
             ],
             [
                 sg.In(size=(25, 1), k='folder', readonly=True, disabled=True, enable_events=True),
-                sg.FilesBrowse(file_types=(('Json Files', '*.json'),('All Files', '*.*'),))
+                sg.FilesBrowse('Tallozás' ,file_types=(('Json Files', '*.json'),('All Files', '*.*'),))
             ],
             [
                 sg.Listbox(values=[], enable_events=True, size =(31,15), k='sudoku_list', select_mode=sg.SELECT_MODE_SINGLE)
@@ -58,8 +58,8 @@ class Sudoku_Window():
                 sg.Listbox(values=[], enable_events=False, size=(75,15), k='history', select_mode=sg.SELECT_MODE_SINGLE)
             ],
             [
-                sg.Button('Visszalép', k='back'),
-                sg.Button('Előrelép', k='forward')
+                sg.Button('Vissza lép', k='back'),
+                sg.Button('Előre lép', k='forward')
             ]]
 
         layout = [[
