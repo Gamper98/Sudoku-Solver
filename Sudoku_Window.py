@@ -102,10 +102,15 @@ class Sudoku_Window():
         for num in nums:
             self.__window[pos].draw_text(num, location=(9 * ((num-1)%3+1),36- 9 * ((num-1)//3+1)), font=('',8))
 
-    def __set_number(self, num, pos):
+    def __set_number(self, num):
         if not self.__is_active: return
-        self.__set_board_at(num, pos)
-        self.__model.set_board_at(num, pos)
+        self.__set_board_at(num, self.__active_sq)
+        self.__model.set_board_at(num, self.__active_sq)
+
+    def __delete_sq(self):
+        if not self.__is_active: return
+        self.__window[self.__active_sq].erase()
+        self.__model.set_board_at(0, self.__active_sq)
 
     def __clear_board(self):
         self.__model.clear()
@@ -187,8 +192,10 @@ class Sudoku_Window():
                 self.__set_active_sq(event)
             elif isinstance(event, str):
                 if  event in ('1','2','3','4','5','6','7','8','9') and self.__active_sq is not None:
-                    self.__set_number(int(event), self.__active_sq)
+                    self.__set_number(int(event))
                     self.__set_history()
+                elif event.startswith('Delete') and self.__active_sq is not None:
+                    self.__delete_sq()
                 elif event == 'clear':
                     self.__clear_board()
                 elif event == 'solve':
