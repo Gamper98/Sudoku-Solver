@@ -183,7 +183,7 @@ class Sudoku_Window():
 
         self.__window['history'].update(set_to_index=[self.__model.get_his_pos()])
 
-    def main(self):
+    def run(self):
         while True:
             event, values = self.__window.read()
             if event in ('Exit', sg.WIN_CLOSED):
@@ -216,4 +216,4 @@ class Sudoku_Window():
 
 if __name__ == '__main__':
     window = Sudoku_Window()
-    window.main()
+    window.run()
