@@ -76,22 +76,18 @@ class Sudoku_Window():
 
     def __set_active_sq(self, event):
         if self.__active_sq is not None:
-            self.__window[self.__active_sq].update(self.__designs['inactive_color'])
-            for pos in self.__containing_sqs:
-                self.__window[tuple(pos)].update(self.__designs['inactive_color'])
+            self.__set_sqs_color('inactive_color', 'inactive_color')
             self.__containing_sqs = []
-        self.__window[event].update(self.__designs['active_color'])
         self.__active_sq = event
 
         num = self.__model.get_board_at(event)
         if num == 0:
+            self.__set_sqs_color('active_color', 'inactive_color')
             return
         sqrs = np.argwhere(self.__model.get_board() == num)
         pv_sqrs = np.argwhere(self.__model.get_pv_at(num-1))
-        self.__containing_sqs = np.concatenate((sqrs, pv_sqrs))
-        for pos in self.__containing_sqs:
-            if tuple(pos) == self.__active_sq: continue
-            self.__window[tuple(pos)].update(self.__designs['containing_sqs'])
+        self.__containing_sqs = np.concatenate((sqrs, pv_sqrs))        
+        self.__set_sqs_color('active_color', 'containing_sqs')
 
     def __set_board_at(self, num, pos):
         self.__window[pos].erase()
@@ -122,13 +118,21 @@ class Sudoku_Window():
         self.__window['history'].update([])
         self.__is_active = True
     
+    def __set_sqs_color(self, act_color, cont_color):
+        if self.__active_sq is not None:
+            self.__window[self.__active_sq].update(self.__designs[act_color])
+            for pos in self.__containing_sqs:
+                if tuple(pos) == self.__active_sq: continue
+                self.__window[tuple(pos)].update(self.__designs[cont_color])
+
     def __solve_board(self, values):
-        self.__model.setup_possible_values()
+        self.__set_sqs_color('inactive_color', 'inactive_color')
+        self.__active_sq = None
         self.__is_active = False
         checkbox_values = [values[key] for key in values.keys() if isinstance(key, int)]
         self.__model.set_pattern_names(checkbox_values)
-        his_pos = self.__model.get_his_pos()
         self.__model.solve()
+        #TODO teljes board setet kiszedni  függvénybe
         for row in range(9):
             for col in range(9):
                 num = self.__model.get_board_at((row, col))
@@ -136,7 +140,7 @@ class Sudoku_Window():
                     self.__set_board_at(num, (row, col))
         self.__fill_possible_values()
         self.__set_history()
-    
+#TODO typing python megcsinálni  
     def __fill_possible_values(self):
         self.__model.setup_possible_values()
         for row in range(9):
@@ -172,7 +176,8 @@ class Sudoku_Window():
             self.__set_pv_at(nums, (his.row,his.col))
 
         self.__window['history'].update(set_to_index=[self.__model.get_his_pos()])
-
+#TODO nem tölti be a historyt ...
+#TODO mikor beírj számot egyben legyen a a eddigi lépések és megoldás beírása a historyban
     def __forward(self):
         his = self.__model.step_forward_his()
         if his.op_type == Op_Type.Add:
