@@ -7,11 +7,13 @@ import json
 class Sudoku_Modell:
     def __init__(self):
         self.__history = Sudoku_History()
-        self.__board = Sudoku_Board(self.__history)
+        self.__board = Sudoku_Board()
         self.__solver = Sudoku_Solver(self.__board, self.__history)
         self.__file = {}
         self.__active_board = None
-
+#TODO miden vissza alaphelyzetbe mehet
+#TODO solver csak függvényekből álljon, de legalább visszaadja a kiszámolt boardot és ne az állítsa be
+#TODO Rövid leirás az osztályokhoz doksi
     #board methods    
     def get_board(self):
         return self.__board.get_board().copy()
@@ -53,7 +55,8 @@ class Sudoku_Modell:
     def get_active_board(self):
         return self.__active_board
 
-    def solve(self):
+    def solve(self):        
+        self.setup_possible_values()
         while True:
             is_found, solution = self.__solver.solve()
             if not is_found: return
