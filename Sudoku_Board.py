@@ -1,16 +1,15 @@
 import numpy as np
 
 class Sudoku_Board():
-    def __init__(self, his):
-        self.__history = his
+    def __init__(self):
         self.__board = np.zeros(81, dtype=np.uint8).reshape(9, -1)
         self.__possible_values = np.full((9,9,9), fill_value=True, dtype=np.bool8)
     
     def get_board(self):
-        return self.__board
+        return self.__board.copy()
 
     def get_possible_values(self):
-        return self.__possible_values
+        return self.__possible_values.copy()
 
     def get_board_at(self, pos):
         return self.__board[pos].copy()
