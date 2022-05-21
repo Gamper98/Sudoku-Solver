@@ -6,10 +6,10 @@ class Sudoku_Board():
         self.__possible_values = np.full((9,9,9), fill_value=True, dtype=np.bool8)
     
     def get_board(self):
-        return self.__board.copy()
+        return self.__board
 
     def get_possible_values(self):
-        return self.__possible_values.copy()
+        return self.__possible_values
 
     def get_board_at(self, pos):
         return self.__board[pos].copy()
