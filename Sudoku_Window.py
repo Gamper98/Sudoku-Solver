@@ -130,7 +130,7 @@ class Sudoku_Window():
         self.__active_sq = None
         self.__is_active = False
         checkbox_values = [values[key] for key in values.keys() if isinstance(key, int)]
-        self.__model.set_pattern_names(checkbox_values)
+        self.__model.set_pattern(checkbox_values)
         self.__model.solve()
         #TODO teljes board setet kiszedni  függvénybe
         for row in range(9):

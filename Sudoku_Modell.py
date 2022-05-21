@@ -34,8 +34,8 @@ class Sudoku_Modell:
     def get_pattern_names(self):
         return self.__solver.get_patterns_names()
 
-    def set_pattern_names(self, values):
-        self.__solver.set_pattern_names(values)
+    def set_pattern(self, values):
+        self.__solver.set_pattern(values)
 
     def setup_possible_values(self):
         if np.all(self.__board.get_possible_values()):

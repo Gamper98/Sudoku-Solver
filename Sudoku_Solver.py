@@ -4,25 +4,25 @@ from Sudoku_History import Op_Type
 
 class Sudoku_Solver():
     def __init__(self, board, his):
-        self.__boardClass = board
-        self.__hisClass = his
+        self.__board = board
+        self.__history = his
     
     def solve(self):
         indeces = [key for key, item in self.__pattern_methods.items() if item[1]]
-        pv_original = self.__boardClass.get_possible_values().copy()
+        pv_original = self.__board.get_possible_values().copy()
         for pos in indeces:
             solution = self.__pattern_methods[pos][0](self)
             if pos in (0, 1) and np.any(solution.flatten()!=0):
                 self.__change_pv(solution)
-                self.__hisClass.append_history_array(Op_Type.Remove, pv_original != self.__boardClass.get_possible_values() , self.__pattern_methods[pos][2])
-                self.__hisClass.append_history_array(Op_Type.Add, solution, self.__pattern_methods[pos][2])
+                self.__history.append_history_array(Op_Type.Remove, pv_original != self.__board.get_possible_values() , self.__pattern_methods[pos][2])
+                self.__history.append_history_array(Op_Type.Add, solution, self.__pattern_methods[pos][2])
                 return True, solution
             if pos not in (0, 1) and solution:
-                self.__hisClass.append_history_array(Op_Type.Remove, pv_original != self.__boardClass.get_possible_values() , self.__pattern_methods[pos][2])
+                self.__history.append_history_array(Op_Type.Remove, pv_original != self.__board.get_possible_values() , self.__pattern_methods[pos][2])
                 return True, None
         return False, None
 
-    def set_pattern_names(self, values):
+    def set_pattern(self, values):
         for i in range(len(values)):
             self.__pattern_methods[i][1] = values[i]
 
@@ -44,16 +44,16 @@ class Sudoku_Solver():
         self.__apply_sq_mask(board)
 
     def __apply_row_mask(self, board):
-        self.__boardClass.get_possible_values()[:] = (self.__boardClass.get_possible_values().T * self.__rows_to_mask(board)).T
+        self.__board.get_possible_values()[:] = (self.__board.get_possible_values().T * self.__rows_to_mask(board)).T
 
     def __apply_col_mask(self, board): 
-        self.__boardClass.get_possible_values()[:] = (self.__boardClass.get_possible_values().T.swapaxes(0,1) * self.__rows_to_mask(board.T)).swapaxes(0,1).T
+        self.__board.get_possible_values()[:] = (self.__board.get_possible_values().T.swapaxes(0,1) * self.__rows_to_mask(board.T)).swapaxes(0,1).T
 
     def __apply_sq_mask(self, board):
-        possible_values_sqares_to_rows = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        possible_values_sqares_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         sq_mask = self.__rows_to_mask(board.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9))
         possible_values_sqares_to_rows = possible_values_sqares_to_rows * sq_mask.T[:,:,None]
-        self.__boardClass.get_possible_values()[:] = possible_values_sqares_to_rows.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        self.__board.get_possible_values()[:] = possible_values_sqares_to_rows.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
 
     def __rows_to_mask(self, board):
         mask = np.full((9,9), fill_value=True)
@@ -71,8 +71,8 @@ class Sudoku_Solver():
         return mask
 
     def get_naked_singles_matrix(self):
-        max_values = np.argmax(self.__boardClass.get_possible_values(), axis=0)
-        count_zeros = np.count_nonzero(self.__boardClass.get_possible_values()==False, axis=0)
+        max_values = np.argmax(self.__board.get_possible_values(), axis=0)
+        count_zeros = np.count_nonzero(self.__board.get_possible_values()==False, axis=0)
         not_only_one_value_mask = count_zeros != 8
         max_values += 1
         max_values[not_only_one_value_mask] = 0
@@ -80,11 +80,11 @@ class Sudoku_Solver():
 
     def get_hidden_singles_matrix(self):
         values = np.zeros((9,9), dtype=np.int8)
-        is_zero_mask = self.__boardClass.get_possible_values() == 0
+        is_zero_mask = self.__board.get_possible_values() == 0
         row_mask = np.count_nonzero(is_zero_mask, axis=2) != 8
         col_mask = np.count_nonzero(is_zero_mask, axis=1) != 8
-        row_max = np.argmax(self.__boardClass.get_possible_values(), axis = 2)
-        col_max = np.argmax(self.__boardClass.get_possible_values(), axis = 1)
+        row_max = np.argmax(self.__board.get_possible_values(), axis = 2)
+        col_max = np.argmax(self.__board.get_possible_values(), axis = 1)
         row_max[row_mask] = 0
         col_max[col_mask] = 0
         x, y = np.where(row_max != 0)
@@ -94,7 +94,7 @@ class Sudoku_Solver():
 
         sq_to_rows_is_zero_mask = is_zero_mask.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         sq_to_rows_mask = np.count_nonzero(sq_to_rows_is_zero_mask, axis=2) != 8        
-        sq_to_rows = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        sq_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
 
         sq_max = np.argmax(sq_to_rows, axis=2)
         sq_max[sq_to_rows_mask] = 0
@@ -106,29 +106,29 @@ class Sudoku_Solver():
         return values
     
     def pointing_pairs(self):
-        lines_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
-        column_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
-        pv = self.__boardClass.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        lines_ppairs = self.__get_change_pos(self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
+        column_ppairs = self.__get_change_pos(self.__board.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
+        pv = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
-        self.__boardClass.get_possible_values()[:] = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
-        pv = self.__boardClass.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        self.__board.get_possible_values()[:] = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        pv = self.__board.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         cond_2 = np.any(pv[column_ppairs])
         pv[column_ppairs] = False
-        self.__boardClass.get_possible_values()[:] = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).swapaxes(1,2)
+        self.__board.get_possible_values()[:] = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).swapaxes(1,2)
         return cond_1 or cond_2
 
     def box_line_reduction(self):
-        lines_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values())
-        column_ppairs = self.__get_change_pos(self.__boardClass.get_possible_values().swapaxes(1,2))
-        pv = self.__boardClass.get_possible_values()
+        lines_ppairs = self.__get_change_pos(self.__board.get_possible_values())
+        column_ppairs = self.__get_change_pos(self.__board.get_possible_values().swapaxes(1,2))
+        pv = self.__board.get_possible_values()
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
-        self.__boardClass.get_possible_values()[:] = pv
-        pv = self.__boardClass.get_possible_values().swapaxes(1,2)
+        self.__board.get_possible_values()[:] = pv
+        pv = self.__board.get_possible_values().swapaxes(1,2)
         cond_2 = np.any(pv[column_ppairs])
         pv[column_ppairs] = False
-        self.__boardClass.get_possible_values()[:] = pv.swapaxes(1,2)
+        self.__board.get_possible_values()[:] = pv.swapaxes(1,2)
         return cond_1 or cond_2
         
     def __get_change_pos(self, pv):
@@ -170,23 +170,23 @@ class Sudoku_Solver():
         return self.__hidden_subsets(4)
 
     def __hidden_subsets(self, nc):
-        pv_original = self.__boardClass.get_possible_values().copy()
+        pv_original = self.__board.get_possible_values().copy()
         pv_rows = self.__subset_finder(pv_original.swapaxes(0,2) , nc)
         pv_cols = self.__subset_finder(pv_original.swapaxes(1,2).swapaxes(0,2), nc)
         pv_sqrs = self.__subset_finder(pv_original.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).swapaxes(0,2), nc)
-        self.__boardClass.get_possible_values()[:] *= pv_rows.swapaxes(0,2) *\
+        self.__board.get_possible_values()[:] *= pv_rows.swapaxes(0,2) *\
                 pv_cols.swapaxes(0,2).swapaxes(1,2) *\
                 pv_sqrs.swapaxes(0,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
-        return np.any(pv_original != self.__boardClass.get_possible_values()) 
+        return np.any(pv_original != self.__board.get_possible_values()) 
 
     def __naked_subsets(self, nc):
-        pv_original = self.__boardClass.get_possible_values().copy()
+        pv_original = self.__board.get_possible_values().copy()
         pv_rows = self.__subset_finder(pv_original , nc)
         pv_cols = self.__subset_finder(pv_original.swapaxes(1,2), nc)
         pv_sqrs = self.__subset_finder(pv_original.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9), nc)
-        self.__boardClass.get_possible_values()[:] *= pv_rows * pv_cols.swapaxes(1,2) *\
+        self.__board.get_possible_values()[:] *= pv_rows * pv_cols.swapaxes(1,2) *\
                 pv_sqrs.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
-        return np.any(pv_original != self.__boardClass.get_possible_values())
+        return np.any(pv_original != self.__board.get_possible_values())
 
     def __subset_finder(self, pv, nc):
         pv_nc_amount_in_cell = pv.copy()
@@ -217,12 +217,12 @@ class Sudoku_Solver():
 
 
     def __nc_wings_apply(self, nc):
-        pv_original = self.__boardClass.get_possible_values().copy()
+        pv_original = self.__board.get_possible_values().copy()
         pv_rows = self.__nc_wings_finder(pv_original , nc)
         pv_cols = self.__nc_wings_finder(pv_original.swapaxes(1,2), nc)
-        self.__boardClass.get_possible_values()[:] *= pv_rows *\
+        self.__board.get_possible_values()[:] *= pv_rows *\
                 pv_cols.swapaxes(1,2)
-        return np.any(pv_original != self.__boardClass.get_possible_values()) 
+        return np.any(pv_original != self.__board.get_possible_values()) 
 
 
     def __nc_wings_finder(self, pv, nc):
