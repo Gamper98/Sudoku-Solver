@@ -13,7 +13,7 @@ class Sudoku_Solver():
         for pos in indeces:
             solution = self.__pattern_methods[pos][0](self)
             if pos in (0, 1) and np.any(solution.flatten()!=0):
-                self.__change_pv(solution)
+                self.setup_possible_values(solution)
                 self.__history.append_history_array(Op_Type.Remove, pv_original != self.__board.get_possible_values() , self.__pattern_methods[pos][2])
                 self.__history.append_history_array(Op_Type.Add, solution, self.__pattern_methods[pos][2])
                 return True, solution
@@ -29,14 +29,12 @@ class Sudoku_Solver():
     def get_patterns_names(self):
         return [item[2] for item in self.__pattern_methods.values()]
 
-    def setup_possible_values(self):
-        not_filled_squared_mask = self.__boardClass.get_board() == 0 
-        self.__boardClass.get_possible_values()[:] *= not_filled_squared_mask
-        self.__apply_masks(self.__boardClass.get_board())
-
-    def __change_pv(self, max_values):   
-        self.__boardClass.get_possible_values()[np.repeat(max_values[None] != 0, 9, axis=0)] = False
-        self.__apply_masks(max_values)
+    def setup_possible_values(self, board = None):
+        if board is None:
+            board = self.__board.get_board()
+        not_filled_squared_mask = board == 0 
+        self.__board.get_possible_values()[:] *= not_filled_squared_mask
+        self.__apply_masks(board)
 
     def __apply_masks(self, board):
         self.__apply_row_mask(board)
