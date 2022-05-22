@@ -45,7 +45,6 @@ class Sudoku_Solver():
         self.__board.get_possible_values()[:] = (self.__board.get_possible_values().T.swapaxes(0,1) * self.__rows_to_mask(board.T)).swapaxes(0,1).T
 
     def __apply_sq_mask(self, board):
-        possible_values_sqares_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         sq_mask = self.__rows_to_mask(board.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9))
         possible_values_sqares_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).T
         possible_values_sqares_to_rows = possible_values_sqares_to_rows * sq_mask
@@ -75,28 +74,22 @@ class Sudoku_Solver():
 
     def get_hidden_singles_matrix(self):
         values = np.zeros((9,9), dtype=np.int8)
-        is_zero_mask = self.__board.get_possible_values() == 0
-        row_mask = np.count_nonzero(is_zero_mask, axis=2) != 8
-        col_mask = np.count_nonzero(is_zero_mask, axis=1) != 8
-        row_max = np.argmax(self.__board.get_possible_values(), axis = 2)
-        col_max = np.argmax(self.__board.get_possible_values(), axis = 1)
-        row_max[row_mask] = 0
-        col_max[col_mask] = 0
-        x, y = np.where(row_max != 0)
-        values[y, row_max[x,y]] = x+1        
-        x, y = np.where(col_max != 0)
-        values[col_max[x,y], y] = x+1   
+        pv = self.__board.get_possible_values().copy()
+        values = self.__find_hidden_singles_in_rows(pv, values)
+        values = self.__find_hidden_singles_in_rows(pv.swapaxes(1,2), values.T).T
 
-        sq_to_rows_is_zero_mask = is_zero_mask.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
-        sq_to_rows_mask = np.count_nonzero(sq_to_rows_is_zero_mask, axis=2) != 8        
-        sq_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        pv_sq_to_row = pv.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+        values = values.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9)
+        values = self.__find_hidden_singles_in_rows(pv_sq_to_row, values).reshape(3,3,3,3).swapaxes(1,2).reshape(9,9)
+        
+        return values
 
-        sq_max = np.argmax(sq_to_rows, axis=2)
-        sq_max[sq_to_rows_mask] = 0
-        x, y = np.where(sq_max != 0)
-        values = values.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9)
-        values[y, sq_max[x,y]] = x+1          
-        values = values.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9)
+    def __find_hidden_singles_in_rows(self, pv, values):   
+        row_mask = np.count_nonzero(pv, axis=2) != 1
+        row_max = np.argmax(pv, axis = 2)
+        row_max[row_mask] = -1
+        x, y = np.where(row_max != -1)
+        values[y, row_max[x,y]] = x+1     
 
         return values
     
