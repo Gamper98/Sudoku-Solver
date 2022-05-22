@@ -31,12 +31,9 @@ class Sudoku_Solver():
 
     def setup_possible_values(self, board = None):
         if board is None:
-            board = self.__board.get_board()
+            board = self.__board.get_board().copy()
         not_filled_squared_mask = board == 0 
         self.__board.get_possible_values()[:] *= not_filled_squared_mask
-        self.__apply_masks(board)
-
-    def __apply_masks(self, board):
         self.__apply_row_mask(board)
         self.__apply_col_mask(board)
         self.__apply_sq_mask(board)
