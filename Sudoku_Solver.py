@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import itertools as itr
 from Sudoku_History import Op_Type
@@ -49,6 +50,7 @@ class Sudoku_Solver():
         possible_values_sqares_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).T
         possible_values_sqares_to_rows = possible_values_sqares_to_rows * sq_mask
         self.__board.get_possible_values()[:] = possible_values_sqares_to_rows.T.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
+#%%
     def __rows_to_mask(self, board):
         mask = np.full((9,9), fill_value=True)
         first_index = np.full((9,9), fill_value=np.arange(0,9)).T
@@ -63,7 +65,7 @@ class Sudoku_Solver():
         mask[x,y] = False
 
         return mask
-
+#%%
     def get_naked_singles_matrix(self):
         max_values = np.argmax(self.__board.get_possible_values(), axis=0)
         count_zeros = np.count_nonzero(self.__board.get_possible_values()==False, axis=0)
@@ -94,8 +96,8 @@ class Sudoku_Solver():
         return values
     
     def pointing_pairs(self):
-        lines_ppairs = self.__get_change_pos(self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
-        column_ppairs = self.__get_change_pos(self.__board.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
+        lines_ppairs = self.__get_third_filled_rows(self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
+        column_ppairs = self.__get_third_filled_rows(self.__board.get_possible_values().swapaxes(1,2).reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9))
         pv = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
@@ -107,8 +109,8 @@ class Sudoku_Solver():
         return cond_1 or cond_2
 
     def box_line_reduction(self):
-        lines_ppairs = self.__get_change_pos(self.__board.get_possible_values())
-        column_ppairs = self.__get_change_pos(self.__board.get_possible_values().swapaxes(1,2))
+        lines_ppairs = self.__get_third_filled_rows(self.__board.get_possible_values())
+        column_ppairs = self.__get_third_filled_rows(self.__board.get_possible_values().swapaxes(1,2))
         pv = self.__board.get_possible_values()
         cond_1 = np.any(pv[lines_ppairs])
         pv[lines_ppairs] = False
@@ -118,20 +120,14 @@ class Sudoku_Solver():
         pv[column_ppairs] = False
         self.__board.get_possible_values()[:] = pv.swapaxes(1,2)
         return cond_1 or cond_2
-        
-    def __get_change_pos(self, pv):
-        pos = self.__get_third_filled_rows(pv)
-        return self.__get_sqrs_to_change_pos(pos)
 
     def __get_third_filled_rows(self, pv):
         rows_to_3x3sqrs = pv.reshape(9,9,3,3)
         rows_to_3x3sqrs_sum = np.sum(rows_to_3x3sqrs, axis=3, dtype=np.bool8)
-        blr_sqrs = np.count_nonzero(rows_to_3x3sqrs_sum, axis=2)
         pos = np.argmax(rows_to_3x3sqrs_sum, axis=2)
+        blr_sqrs = np.count_nonzero(rows_to_3x3sqrs_sum, axis=2)
         pos[blr_sqrs != 1] = -1
-        return pos
 
-    def __get_sqrs_to_change_pos(self, pos):
         nums , sqrs = np.where(pos != -1)
         cols = [pos[nums, sqrs]*3,pos[nums, sqrs]*3+1, pos[nums, sqrs]*3+2 ]
         rows = [sqrs//3*3 + (sqrs-1)%3, sqrs//3*3 + (sqrs+1)%3]
@@ -252,3 +248,5 @@ class Sudoku_Solver():
         11:[swordfish, True, 'Swordfish']
         }
 
+
+# %%
