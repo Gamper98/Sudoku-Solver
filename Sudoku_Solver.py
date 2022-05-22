@@ -47,15 +47,15 @@ class Sudoku_Solver():
     def __apply_sq_mask(self, board):
         possible_values_sqares_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
         sq_mask = self.__rows_to_mask(board.reshape(3,3,3,3).swapaxes(1,2).reshape(9,9))
-        possible_values_sqares_to_rows = possible_values_sqares_to_rows * sq_mask.T[:,:,None]
-        self.__board.get_possible_values()[:] = possible_values_sqares_to_rows.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
-
+        possible_values_sqares_to_rows = self.__board.get_possible_values().reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9).T
+        possible_values_sqares_to_rows = possible_values_sqares_to_rows * sq_mask
+        self.__board.get_possible_values()[:] = possible_values_sqares_to_rows.T.reshape(9,3,3,3,3).swapaxes(2,3).reshape(9,9,9)
     def __rows_to_mask(self, board):
         mask = np.full((9,9), fill_value=True)
-        first_index = np.full((9,9), fill_value=np.arange(0,9))
+        first_index = np.full((9,9), fill_value=np.arange(0,9)).T
         board = board.astype(np.int8)
         board -= 1
-        board_stacked = np.stack((first_index.T, board), axis=1)
+        board_stacked = np.stack((first_index, board), axis=1)
 
         board_stacked_in_pairs = board_stacked.swapaxes(1,2)
         not_negative_index_mask = board_stacked_in_pairs[:,:,1] != -1
